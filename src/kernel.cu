@@ -6,6 +6,8 @@
 #include "utilityCore.hpp"
 #include "kernel.h"
 
+#define DOUBLE_CELL_WIDTH 0
+
 // LOOK-2.1 potentially useful for doing grid-based neighbor search
 #ifndef imax
 #define imax( a, b ) ( ((a) > (b)) ? (a) : (b) )
@@ -157,7 +159,12 @@ void Boids::initSimulation(int N) {
   checkCUDAErrorWithLine("kernGenerateRandomPosArray failed!");
 
   // LOOK-2.1 computing grid params
-  gridCellWidth = 2.0f * std::max(std::max(rule1Distance, rule2Distance), rule3Distance);
+  gridCellWidth =
+#if DOUBLE_CELL_WIDTH
+    2.0 *
+#endif
+    std::max(std::max(rule1Distance, rule2Distance), rule3Distance);
+
   int halfSideCount = (int)(scene_scale / gridCellWidth) + 1;
   gridSideCount = 2 * halfSideCount;
 
@@ -442,9 +449,17 @@ __global__ void kernUpdateVelNeighborSearchScattered(
   const glm::ivec3 thisGridPos = computeGridPos(pos[iSelf], gridMin, inverseCellWidth);
 
   // - Identify which cells may contain neighbors. This isn't always 8.
+#if DOUBLE_CELL_WIDTH
   const glm::vec3 thisCellRelativePos = thisPos - (gridMin + glm::vec3(thisGridPos) * cellWidth);
   const glm::ivec3 searchDir = glm::ivec3(glm::sign(thisCellRelativePos - glm::vec3(cellWidth / 2)));
   const glm::ivec3 corner2 = thisGridPos + searchDir;
+
+  glm::ivec3 minPos = glm::min(thisGridPos, corner2);
+  glm::ivec3 maxPos = glm::max(thisGridPos, corner2);
+#else
+  glm::ivec3 minPos = thisGridPos - glm::ivec3(1);
+  glm::ivec3 maxPos = thisGridPos + glm::ivec3(1);
+#endif
 
   // - For each cell, read the start/end indices in the boid pointer array.
   // - Access each boid in the cell and compute velocity change from
@@ -456,11 +471,11 @@ __global__ void kernUpdateVelNeighborSearchScattered(
   int numNeighborsRule1 = 0;
   int numNeighborsRule3 = 0;
 
-  for (int z = imin(thisGridPos.z, corner2.z); z <= imax(thisGridPos.z, corner2.z); ++z) {
+  for (int z = minPos.z; z <= maxPos.z; ++z) {
     if (z < 0 || z >= gridResolution) { continue; }
-    for (int y = imin(thisGridPos.y, corner2.y); y <= imax(thisGridPos.y, corner2.y); ++y) {
+    for (int y = minPos.y; y <= maxPos.y; ++y) {
       if (y < 0 || y >= gridResolution) { continue; }
-      for (int x = imin(thisGridPos.x, corner2.x); x <= imax(thisGridPos.x, corner2.x); ++x) {
+      for (int x = minPos.x; x <= maxPos.x; ++x) {
         if (x < 0 || x >= gridResolution) { continue; }
         
         const glm::ivec3 searchGridPos = glm::ivec3(x, y, z);
