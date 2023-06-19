@@ -6,6 +6,10 @@ Project 1 - Flocking**
 * Tested on: Windows 10, i7-10750H @ 2.60GHz 16GB, NVIDIA GeForce RTX 2070 8GB (personal laptop)
   * Compute capability: 7.5
 
+![](images/captures/gif_5k.gif)
+
+![](images/captures/gif_50k.gif)
+
 ### (TODO: Your README)
 
 Include screenshots, analysis, etc. (Remember, this is public, so don't put
