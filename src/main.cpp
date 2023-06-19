@@ -13,14 +13,17 @@
 // ================
 
 // LOOK-2.1 LOOK-2.3 - toggles for UNIFORM_GRID and COHERENT_GRID
-#define VISUALIZE 1
-#define UNIFORM_GRID 1
-#define COHERENT_GRID 1
+#define VISUALIZE 0
+#define UNIFORM_GRID 0
+#define COHERENT_GRID 0
 
-#define UNIT_TESTING 1
+#define UNIT_TESTING 0
+
+#define FPS_ACCUMULATE 1
+#define FPS_WAIT_PERIOD 4.0
 
 // LOOK-1.2 - change this to adjust particle count in the simulation
-const int N_FOR_VIS = 5000;
+const int N_FOR_VIS = 1000000;
 const float DT = 0.2f;
 
 /**
@@ -216,8 +219,9 @@ void initShaders(GLuint * program) {
 
   void mainLoop() {
     double fps = 0;
-    double timebase = 0;
+    double timebase = glfwGetTime();
     int frame = 0;
+    bool doneWaiting = false;
 
 #if UNIT_TESTING
     Boids::unitTest(); // LOOK-1.2 We run some basic example code to make sure
@@ -230,11 +234,23 @@ void initShaders(GLuint * program) {
       frame++;
       double time = glfwGetTime();
 
+#if FPS_ACCUMULATE
+      if (!doneWaiting && time - timebase > FPS_WAIT_PERIOD) {
+        doneWaiting = true;
+        timebase = time;
+        frame = 0;
+      }
+
+      if (doneWaiting) {
+        fps = frame / (time - timebase);
+      }
+#else
       if (time - timebase > 1.0) {
         fps = frame / (time - timebase);
         timebase = time;
         frame = 0;
       }
+#endif
 
       runCUDA();
 
