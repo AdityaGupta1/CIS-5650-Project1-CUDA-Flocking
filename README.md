@@ -18,15 +18,19 @@ Some example simulations:
 
 |![](images/captures/5k.gif)|
 |:--:|
-|*5,000 boids*|
+|*5,000 boids, scene scale = 100*|
 
 |![](images/captures/50k.gif)|
 |:--:|
-|*50,000 boids*|
+|*50,000 boids, scene scale = 100*|
 
 |![](images/captures/500k.gif)|
 |:--:|
-|*500,000 boids*|
+|*500,000 boids, scene scale = 200*|
+
+|![](images/captures/5m.gif)|
+|:--:|
+|*5,000,000 boids, scene scale = 400*|
 
 ## Implementation and Performance
 
@@ -36,4 +40,46 @@ A naive implementation could have each boid check every other boid to determine 
 - Constructing a uniform grid data structure reduces each boid's neighbor checks from O(n) to O(1).
 - Rearranging buffer layouts for more contiguous memory access further increases performance.
 
-### (TODO: performance, graphs, etc.)
+We now compare the performance of the naive GPU method, uniform grid method, and coherent grid method. 
+
+### # Boids vs. FPS
+
+|![](images/performance/num_boids_no_viz.png)|
+|:--:|
+|*scene scale = 100, single-width cells*|
+
+|TODO: with visualization|
+|:--:|
+|*scene scale = 100, single-width cells*|
+
+The naive method is faster for very small numbers of boids since it does not need to construct the grid data structure. However, its runtime quickly declines, and the coherent grid method is the clear winner overall.
+
+### Block Size vs. FPS
+
+|![](images/performance/block_size.png)|
+|:--:|
+|*30,000 boids, scene scale = 100, single-width cells*|
+
+Similar to the previous comparison, the coherent grid method is the best overall. As for block sizes, increasing the block size past 32 had little effect on performance. However, block sizes under 32 decreased performance, dropping lower with smaller block sizes. This is likely because the warp size is 32, so block sizes less than that are sub-optimal and require more scheduling work.
+
+### Grid Cell Size vs. FPS
+
+TODO (need to actually implement this first lol)
+
+### Performance Questions
+
+**For each implementation, how does changing the number of boids affect performance? Why do you think this is?**
+
+Increasing the number of boids while keeping all other factors constant almost always decreased performance. This is because with more boids in the same space, each boid has to take more boids into account when calculating its own change in velocity. Even for the grid-based methods, there will be more boids to consider within the grid cells surrounding any one boid.
+
+**For each implementation, how does changing the block count and block size affect performance? Why do you think this is?**
+
+As stated above, increasing the block size past 32 had little effect on performance. However, block sizes under 32 decreased performance, dropping lower with smaller block sizes. This is likely because the warp size is 32, so block sizes less than that are sub-optimal and require more scheduling work.
+
+**For the coherent uniform grid: did you experience any performance improvements with the more coherent uniform grid? Was this the outcome you expected? Why or why not?**
+
+The coherent grid resulted in significant performance improvements over the regular uniform grid. I expected this outcome since memory access becomes more contiguous and there is one less array indirection per thread, but I did not expect how drastic the performance improvement would be. Especially for 1,000,000 boids, the difference of 2 FPS and 124 FPS is enormous. I think I underestimated how important proper memory access can be for this kind of project.
+
+**Did changing cell width and checking 27 vs 8 neighboring cells affect performance? Why or why not? Be careful: it is insufficient (and possibly incorrect) to say that 27-cell is slower simply because there are more cells to check!**
+
+TODO: answer after implementing flexible grid size

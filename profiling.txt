@@ -1,5 +1,5 @@
 ====================================
-# of boids (scene scale = 100.0f, single width cells)
+# of boids (no visualization, scene scale = 100, single-width cells)
 ====================================
 
 naive
@@ -13,7 +13,7 @@ naive
 300000: 1 fps
 1000000: 0 fps
 
-scattered grid
+uniform grid
 --------------------
 300: 1595 fps
 1000: 1635 fps
@@ -36,7 +36,7 @@ coherent grid
 1000000: 124 fps
 
 ====================================
-block size (30000 boids, scene scale = 100.0f, single width cells)
+block size (30000 boids, scene scale = 100, single-width cells)
 ====================================
 
 naive
@@ -53,7 +53,7 @@ naive
 512: 111 fps
 1024: 117 fps
 
-scattered grid
+uniform grid
 --------------------
 1: 535 fps
 2: 672 fps
