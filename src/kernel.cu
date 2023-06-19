@@ -49,7 +49,7 @@ void checkCUDAError(const char *msg, int line = -1) {
 
 #define rule1Scale 0.01f
 #define rule2Scale 0.1f
-#define rule3Scale 0.1f
+#define rule3Scale 0.05f
 
 #define maxSpeed 1.0f
 

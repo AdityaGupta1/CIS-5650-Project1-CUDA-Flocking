@@ -20,7 +20,7 @@
 #define UNIT_TESTING 1
 
 // LOOK-1.2 - change this to adjust particle count in the simulation
-const int N_FOR_VIS = 5000;
+const int N_FOR_VIS = 500000;
 const float DT = 0.2f;
 
 /**
@@ -290,7 +290,7 @@ void initShaders(GLuint * program) {
     }
     else if (rightMousePressed) {
       zoom += (ypos - lastY) / height;
-      zoom = std::fmax(0.1f, std::fmin(zoom, 5.0f));
+      zoom = std::fmax(0.1f, std::fmin(zoom, maxZoom));
       updateCamera();
     }
 
