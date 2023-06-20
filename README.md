@@ -66,7 +66,7 @@ Similar to the previous comparison, the coherent grid method is the best overall
 
 |![](images/performance/cell_size.png)|
 |:--:|
-|*50,000 boids, scene scale = 100, no visualization*|
+|*50,000 boids, scene scale = 100, block size = 128, no visualization*|
 
 The size of grid cells relative to the neighborhood distance also has an impact on performance. A ratio of 1 turned out to be best. This makes sense as having more cells would mean additional overhead for sorting and searching those cells, while having less cells would require searching through significantly more boids per boid.
 
