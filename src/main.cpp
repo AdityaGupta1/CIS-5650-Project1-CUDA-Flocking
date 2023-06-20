@@ -17,9 +17,9 @@
 #define UNIFORM_GRID 1
 #define COHERENT_GRID 1
 
-#define UNIT_TESTING 0
+#define UNIT_TESTING 1
 
-#define FPS_ACCUMULATE 1
+#define FPS_ACCUMULATE 0
 #define FPS_WAIT_PERIOD 4.0
 
 // LOOK-1.2 - change this to adjust particle count in the simulation
