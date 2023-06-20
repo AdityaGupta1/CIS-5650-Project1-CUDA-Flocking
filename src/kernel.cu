@@ -6,7 +6,7 @@
 #include "utilityCore.hpp"
 #include "kernel.h"
 
-#define DOUBLE_CELL_WIDTH 0
+#define CELL_WIDTH_MULTIPLIER 1.0
 
 // LOOK-2.1 potentially useful for doing grid-based neighbor search
 #ifndef imax
@@ -54,7 +54,7 @@ void checkCUDAError(const char *msg, int line = -1) {
 #define maxSpeed 1.0f
 
 /*! Size of the starting area in simulation space. */
-#define scene_scale 400.0f
+#define scene_scale 100.0f
 
 /***********************************************
 * Kernel state (pointers are device pointers) *
@@ -93,6 +93,7 @@ glm::vec3* dev_pos2;
 // These are automatically computed for you in Boids::initSimulation
 int gridCellCount;
 int gridSideCount;
+float neighborhoodDistance;
 float gridCellWidth;
 float gridInverseCellWidth;
 glm::vec3 gridMinimum;
@@ -163,11 +164,8 @@ void Boids::initSimulation(int N) {
   checkCUDAErrorWithLine("kernGenerateRandomPosArray failed!");
 
   // LOOK-2.1 computing grid params
-  gridCellWidth =
-#if DOUBLE_CELL_WIDTH
-    2.0 *
-#endif
-    std::max(std::max(rule1Distance, rule2Distance), rule3Distance);
+  neighborhoodDistance = std::max(std::max(rule1Distance, rule2Distance), rule3Distance);
+  gridCellWidth = CELL_WIDTH_MULTIPLIER * neighborhoodDistance;
 
   int halfSideCount = (int)(scene_scale / gridCellWidth) + 1;
   gridSideCount = 2 * halfSideCount;
@@ -446,6 +444,7 @@ __global__ void kernRearrangeBuffer(const int N, const int* indices,
 __global__ void kernUpdateVelNeighborSearchScattered(
   int N, int gridResolution, glm::vec3 gridMin,
   float inverseCellWidth, float cellWidth,
+  float neighborhoodDist,
   int *gridCellStartIndices, int *gridCellEndIndices,
   int *particleArrayIndices,
   glm::vec3 *pos, glm::vec3 *vel1, glm::vec3 *vel2) 
@@ -458,21 +457,13 @@ __global__ void kernUpdateVelNeighborSearchScattered(
   // TODO-2.1 - Update a boid's velocity using the uniform grid to reduce
   // the number of boids that need to be checked.
   // - Identify the grid cell that this particle is in
-  const glm::vec3 thisPos = pos[iSelf];
-  const glm::ivec3 thisGridPos = computeGridPos(pos[iSelf], gridMin, inverseCellWidth);
-
   // - Identify which cells may contain neighbors. This isn't always 8.
-#if DOUBLE_CELL_WIDTH
-  const glm::vec3 thisCellRelativePos = thisPos - (gridMin + glm::vec3(thisGridPos) * cellWidth);
-  const glm::ivec3 searchDir = glm::ivec3(glm::sign(thisCellRelativePos - glm::vec3(cellWidth / 2)));
-  const glm::ivec3 corner2 = thisGridPos + searchDir;
-
-  glm::ivec3 minPos = glm::min(thisGridPos, corner2);
-  glm::ivec3 maxPos = glm::max(thisGridPos, corner2);
-#else
-  glm::ivec3 minPos = thisGridPos - glm::ivec3(1);
-  glm::ivec3 maxPos = thisGridPos + glm::ivec3(1);
-#endif
+  const glm::vec3 thisPos = pos[iSelf];
+  glm::vec3 posAdd = glm::vec3(neighborhoodDist);
+  glm::ivec3 corner1 = computeGridPos(thisPos - posAdd, gridMin, inverseCellWidth);
+  glm::ivec3 corner2 = computeGridPos(thisPos + posAdd, gridMin, inverseCellWidth);
+  glm::ivec3 minPos = glm::min(corner1, corner2);
+  glm::ivec3 maxPos = glm::max(corner1, corner2);
 
   // - For each cell, read the start/end indices in the boid pointer array.
   // - Access each boid in the cell and compute velocity change from
@@ -553,6 +544,7 @@ __global__ void kernUpdateVelNeighborSearchScattered(
 __global__ void kernUpdateVelNeighborSearchCoherent(
   int N, int gridResolution, glm::vec3 gridMin,
   float inverseCellWidth, float cellWidth,
+  float neighborhoodDist,
   int *gridCellStartIndices, int *gridCellEndIndices,
   glm::vec3 *pos, glm::vec3 *vel1, glm::vec3 *vel2) {
   const int iSelf = (blockIdx.x * blockDim.x) + threadIdx.x;
@@ -565,21 +557,13 @@ __global__ void kernUpdateVelNeighborSearchCoherent(
   // This should expect gridCellStartIndices and gridCellEndIndices to refer
   // directly to pos and vel1.
   // - Identify the grid cell that this particle is in
-  const glm::vec3 thisPos = pos[iSelf];
-  const glm::ivec3 thisGridPos = computeGridPos(pos[iSelf], gridMin, inverseCellWidth);
-
   // - Identify which cells may contain neighbors. This isn't always 8.
-#if DOUBLE_CELL_WIDTH
-  const glm::vec3 thisCellRelativePos = thisPos - (gridMin + glm::vec3(thisGridPos) * cellWidth);
-  const glm::ivec3 searchDir = glm::ivec3(glm::sign(thisCellRelativePos - glm::vec3(cellWidth / 2)));
-  const glm::ivec3 corner2 = thisGridPos + searchDir;
-
-  glm::ivec3 minPos = glm::min(thisGridPos, corner2);
-  glm::ivec3 maxPos = glm::max(thisGridPos, corner2);
-#else
-  glm::ivec3 minPos = thisGridPos - glm::ivec3(1);
-  glm::ivec3 maxPos = thisGridPos + glm::ivec3(1);
-#endif
+  const glm::vec3 thisPos = pos[iSelf];
+  glm::vec3 posAdd = glm::vec3(neighborhoodDist);
+  glm::ivec3 corner1 = computeGridPos(thisPos - posAdd, gridMin, inverseCellWidth);
+  glm::ivec3 corner2 = computeGridPos(thisPos + posAdd, gridMin, inverseCellWidth);
+  glm::ivec3 minPos = glm::min(corner1, corner2);
+  glm::ivec3 maxPos = glm::max(corner1, corner2);
 
   // - For each cell, read the start/end indices in the boid pointer array.
   //   DIFFERENCE: For best results, consider what order the cells should be
@@ -698,8 +682,9 @@ void Boids::stepSimulationScatteredGrid(float dt) {
 
   // - Perform velocity updates using neighbor search
   kernUpdateVelNeighborSearchScattered<<<fullBlocksPerGrid, blockSize>>>(numObjects, gridSideCount,
-    gridMinimum, gridInverseCellWidth, gridCellWidth, dev_gridCellStartIndices, dev_gridCellEndIndices,
-    dev_particleArrayIndices, dev_pos1, dev_vel1, dev_vel2);
+    gridMinimum, gridInverseCellWidth, gridCellWidth, neighborhoodDistance,
+    dev_gridCellStartIndices, dev_gridCellEndIndices, dev_particleArrayIndices, 
+    dev_pos1, dev_vel1, dev_vel2);
 
   // - Update positions
   kernUpdatePos<<<fullBlocksPerGrid, blockSize>>>(numObjects, dt, dev_pos1, dev_vel2);
@@ -742,7 +727,8 @@ void Boids::stepSimulationCoherentGrid(float dt) {
 
   // - Perform velocity updates using neighbor search
   kernUpdateVelNeighborSearchCoherent<<<fullBlocksPerGrid, blockSize>>>(numObjects, gridSideCount,
-    gridMinimum, gridInverseCellWidth, gridCellWidth, dev_gridCellStartIndices, dev_gridCellEndIndices,
+    gridMinimum, gridInverseCellWidth, gridCellWidth, neighborhoodDistance, 
+    dev_gridCellStartIndices, dev_gridCellEndIndices,
     dev_pos2, dev_vel2, dev_vel1);
 
   // - Update positions

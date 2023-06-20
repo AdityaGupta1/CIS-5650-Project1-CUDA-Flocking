@@ -40,7 +40,7 @@ A naive implementation could have each boid check every other boid to determine 
 - Constructing a uniform grid data structure reduces each boid's neighbor checks from O(n) to O(1).
 - Rearranging buffer layouts for more contiguous memory access further increases performance.
 
-We now compare the performance of the naive GPU method, uniform grid method, and coherent grid method. 
+We now compare the performance of the naive GPU method, uniform grid method, and coherent grid method, as well as of various other parameters.
 
 ### # Boids vs. FPS
 
@@ -58,13 +58,17 @@ In both cases, the naive method is faster for very small numbers of boids since 
 
 |![](images/performance/block_size.png)|
 |:--:|
-|*30,000 boids, scene scale = 100, single-width cells*|
+|*30,000 boids, scene scale = 100, single-width cells, no visualization*|
 
 Similar to the previous comparison, the coherent grid method is the best overall. As for block sizes, increasing the block size past 32 had little effect on performance. However, block sizes under 32 decreased performance, dropping lower with smaller block sizes. This is likely because the warp size is 32, so block sizes less than that are sub-optimal and require more scheduling work.
 
 ### Grid Cell Size vs. FPS
 
-TODO (need to actually implement this first lol)
+|![](images/performance/cell_size.png)|
+|:--:|
+|*50,000 boids, scene scale = 100, no visualization*|
+
+The size of grid cells relative to the neighborhood distance also has an impact on performance. A ratio of 1 turned out to be best. This makes sense as having more cells would mean additional overhead for sorting and searching those cells, while having less cells would require searching through significantly more boids per boid.
 
 ### Performance Questions
 
@@ -82,4 +86,4 @@ The coherent grid resulted in significant performance improvements over the regu
 
 **Did changing cell width and checking 27 vs 8 neighboring cells affect performance? Why or why not? Be careful: it is insufficient (and possibly incorrect) to say that 27-cell is slower simply because there are more cells to check!**
 
-TODO: answer after implementing flexible grid size
+Checking 27 cells instead of 8 actually increased performance. Though it did mean each boid had to check more cells, the boids within those cells were much more likely to be within the neighborhood distance. The reduction in unnecessary boid checks more than made up for the increased cost of searching extra cells.

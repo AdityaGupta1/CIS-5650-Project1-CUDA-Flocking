@@ -73,7 +73,7 @@ coherent grid
 1000000: 163 fps
 
 ====================================
-block size (30000 boids, scene scale = 100, single-width cells)
+block size (30000 boids, scene scale = 100, single-width cells, no visualization)
 ====================================
 
 naive
@@ -117,3 +117,25 @@ coherent grid
 256: 1408 fps
 512: 1418 fps
 1024: 1416 fps
+
+====================================
+ratio of cell width to neighborhood distance (50000 boids, scene scale = 100, coherent grid, no visualization)
+====================================
+
+uniform grid
+--------------------
+0.25: 27 fps
+0.5: 462 fps
+1: 878 fps
+2: 727 fps
+4: 317 fps
+8: 137 fps
+
+coherent grid
+--------------------
+0.25: 120 fps
+0.5: 1047 fps
+1: 1292 fps
+2: 1221 fps
+4: 748 fps
+8: 322 fps
