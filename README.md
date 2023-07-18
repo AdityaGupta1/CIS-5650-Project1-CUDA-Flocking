@@ -82,7 +82,7 @@ As stated above, increasing the block size past 32 had little effect on performa
 
 **For the coherent uniform grid: did you experience any performance improvements with the more coherent uniform grid? Was this the outcome you expected? Why or why not?**
 
-The coherent grid resulted in significant performance improvements over the regular uniform grid. I expected this outcome since memory access becomes more contiguous and there is one less array indirection per thread, but I did not expect how drastic the performance improvement would be. Especially for 1,000,000 boids, the difference of 2 FPS and 124 FPS is enormous. I think I underestimated how important proper memory access can be for this kind of project.
+The coherent grid resulted in significant performance improvements over the regular uniform grid. I expected this outcome since memory access becomes more contiguous and there is one less array indirection per thread, but I did not expect how drastic the performance improvement would be. Especially for 1,000,000 boids, the difference between 2 FPS and 124 FPS is enormous. I think I underestimated how important proper memory access can be for this kind of project.
 
 **Did changing cell width and checking 27 vs 8 neighboring cells affect performance? Why or why not? Be careful: it is insufficient (and possibly incorrect) to say that 27-cell is slower simply because there are more cells to check!**
 
