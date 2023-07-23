@@ -8,7 +8,7 @@ Project 1 - Flocking**
 
 ## Introduction
 
-*Boids* is a simulation in which particles representing birds or fish (boids) move around the simulation space according to three rules:
+*Boids* is a simulation in which particles (boids) representing flocking individuals (e.g. birds or fish) move around the simulation space according to three rules:
 
 1. *cohesion* - Boids move towards the perceived center of mass of their neighbors.
 2. *separation* - Boids avoid getting to close to their neighbors.
